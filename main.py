@@ -16,10 +16,13 @@ db = shelve.open('db', writeback = True)
 #print('db deleted, start loop with glob')
 
 # loop over the images
-for imagePath in glob.glob('w:/Christel/**/*.jpg', recursive=True):
+for imagePath in glob.glob('w:/**/*.jpg', recursive=True):
     # load the image and compute hash
     image = Image.open(imagePath)
-    h = str(imagehash.dhash(image))
+    try:
+        h = str(imagehash.dhash(image))
+    except:
+        h = str ('Error in Hash Creation')
     # update database
     filename = imagePath[imagePath.rfind("/") + 1:]
     if h in db.keys():
@@ -27,10 +30,12 @@ for imagePath in glob.glob('w:/Christel/**/*.jpg', recursive=True):
           db[h] =  db.get(h, []) + [filename]
     else:
         db[h] = [filename]
-# Limit processing to x files for testing
+
     counter += 1
-    if counter >= 2500:
-        break
+# Limit processing to x files for testing
+#    if counter >= 25:
+#        break
+print('Files processed: ',str(counter))
 
 # Print db content to check/test
 print('DB content: ',len(db.keys()),' different hash values')
