@@ -8,7 +8,7 @@ from datetime import datetime
 
 types = ('*.jpg', '*.jpeg', '*.gif', '*.png', '*.bmp')
 counter = 0
-limit = 250
+limit = 2500000
 divisor = 100
 
 # open MariaDB database
@@ -32,7 +32,7 @@ cur.execute("TRUNCATE TABLE files")
 print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"),' - Table files truncated')
 
 print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"),' - Building file list')
-file_list = glob.glob('w:/Christel/**/*.jpg', recursive=True)
+file_list = glob.glob('w:/**/*.jpg', recursive=True)
 print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"),' - Filecount: ', str(len(file_list)),' Limit: ',str(limit))
 
 # loop over the images
@@ -53,16 +53,16 @@ for imagePath in file_list:
 
     counter += 1
     if counter % divisor == 0:
-        print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"),' - Processed: ', str(counter))
+        conn.commit()
+        print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"),' - Processed & Commited: ', str(counter))
 # Limit processing to x files for testing
     if counter >= limit:
-        print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"), ' - Processed: ', str(counter))
         break
-print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"),' - Files processed: ', str(counter))
+print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"),' - Processed: ', str(counter))
 
 # Print db content to check/test
 
-print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"),' - DB content: ')
+#print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"),' - DB content: ')
 #cur.execute("SELECT hash,count(*) as anzahl FROM files group by hash")   # Where Clause: "SELECT a,b,c FROM tab WHERE a=?",(filter_value,))
 #for (hash, anzahl) in cur:
 #    print(f"Anzahl: {anzahl}, Hash: {hash}")
