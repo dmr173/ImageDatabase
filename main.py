@@ -1,47 +1,73 @@
 from PIL import Image
 import imagehash
-import argparse
 import shelve
 import glob
+import mariadb
+import sys
+from datetime import datetime
 
 types = ('*.jpg', '*.jpeg', '*.gif', '*.png', '*.bmp')
 counter = 0
+limit = 250
+divisor = 100
 
-# open shelve database
-db = shelve.open('db', writeback = True)
+# open MariaDB database
+try:
+    conn = mariadb.connect(
+        user="root",
+        password="MariaDB10@",
+        host="10.10.10.20",
+        port=3307,
+        database="filehash"
+    )
+except mariadb.Error as e:
+   print(f"Error connecting to MariaDB Platform: {e}")
+   sys.exit(1)
+
+# Get Cursor
+cur = conn.cursor()
 
 # Delete all values in db
-#for key in db.keys():
-#    del db[key]
-#print('db deleted, start loop with glob')
+cur.execute("TRUNCATE TABLE files")
+print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"),' - Table files truncated')
+
+print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"),' - Building file list')
+file_list = glob.glob('w:/Christel/**/*.jpg', recursive=True)
+print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"),' - Filecount: ', str(len(file_list)),' Limit: ',str(limit))
 
 # loop over the images
-for imagePath in glob.glob('w:/**/*.jpg', recursive=True):
-    # load the image and compute hash
-    image = Image.open(imagePath)
+for imagePath in file_list:
+    # Try to load the image and compute hash
     try:
+        image = Image.open(imagePath)
         h = str(imagehash.dhash(image))
     except:
-        h = str ('Error in Hash Creation')
+        h = str('Error Hash Creation')
     # update database
     filename = imagePath[imagePath.rfind("/") + 1:]
-    if h in db.keys():
-       if not(filename in db[h]):
-          db[h] =  db.get(h, []) + [filename]
-    else:
-        db[h] = [filename]
+    try:
+        cur.execute("INSERT INTO files (hash,filename,path, filetype) VALUES (?, ?, ?,?)",
+                    (h, filename, ' ',' '))
+    except:
+        print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"),' - Error inserting hash for: ',filename)
 
     counter += 1
+    if counter % divisor == 0:
+        print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"),' - Processed: ', str(counter))
 # Limit processing to x files for testing
-#    if counter >= 25:
-#        break
-print('Files processed: ',str(counter))
+    if counter >= limit:
+        print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"), ' - Processed: ', str(counter))
+        break
+print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"),' - Files processed: ', str(counter))
 
 # Print db content to check/test
-print('DB content: ',len(db.keys()),' different hash values')
-for key in db.keys():
-    if len(db[key])>1:
-       print('Hash: ',key,': ',len(db[key]),' image(s) found: ',db[key])
 
-# close the shelve database
-db.close()
+print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"),' - DB content: ')
+#cur.execute("SELECT hash,count(*) as anzahl FROM files group by hash")   # Where Clause: "SELECT a,b,c FROM tab WHERE a=?",(filter_value,))
+#for (hash, anzahl) in cur:
+#    print(f"Anzahl: {anzahl}, Hash: {hash}")
+
+# commit changes and close the database
+conn.commit()
+conn.close()
+print(datetime.now().strftime("%d.%m.%Y %H:%M:%S"),' - Completed')
